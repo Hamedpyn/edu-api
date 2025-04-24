@@ -3,6 +3,7 @@ const path = require("path");
 
 const articleModel = require("../../models/article");
 
+
 exports.create = async (req, res, next) => {
   try {
     const { title, description, body, shortName, categoryID } = req.body;
@@ -18,6 +19,23 @@ exports.create = async (req, res, next) => {
       return res.status(401).json({ message: "duplicated short name" });
     }
 
+    let coverUrl = "";
+    if (cover) {
+      const uploadFromBuffer = () => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: "article-covers" },
+            (error, result) => {
+              if (result) resolve(result.secure_url);
+              else reject(error);
+            }
+          );
+          streamifier.createReadStream(cover.buffer).pipe(stream);
+        });
+      };
+      coverUrl = await uploadFromBuffer();
+    }
+
     const article = await articleModel.create({
       title,
       description,
@@ -25,7 +43,7 @@ exports.create = async (req, res, next) => {
       body,
       creator: req.user._id,
       categoryID,
-      cover: req.file.filename,
+      cover: coverUrl,
       publish: 1,
     });
 
@@ -40,17 +58,34 @@ exports.create = async (req, res, next) => {
 exports.saveDraft = async (req, res, next) => {
   try {
     const { title, description, body, shortName, categoryID } = req.body;
+    const cover = req.file;
 
     const duplicatedShortname = await articleModel.findOne({ shortName });
     if (duplicatedShortname) {
       return res.status(401).json({ message: "duplicated short name" });
     }
-    
-    const cover = req.file;
+
     await articleModel.validation({ ...req.body, cover }).catch((err) => {
       err.statusCode = 400;
       throw err;
     });
+
+    let coverUrl = "";
+    if (cover) {
+      const uploadFromBuffer = () => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: "article-covers" },
+            (error, result) => {
+              if (result) resolve(result.secure_url);
+              else reject(error);
+            }
+          );
+          streamifier.createReadStream(cover.buffer).pipe(stream);
+        });
+      };
+      coverUrl = await uploadFromBuffer();
+    }
 
     const article = await articleModel.create({
       title,
@@ -59,7 +94,7 @@ exports.saveDraft = async (req, res, next) => {
       body,
       creator: req.user._id,
       categoryID,
-      cover: req.file.filename,
+      cover: coverUrl,
       publish: 0,
     });
 
