@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "./server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/courses/covers/(.*)",
+      "dest": "/public/courses/covers/$1"
+    },
+    {
+      "src": "/v1/(.*)",
+      "dest": "/server.js"
+    }
+  ]
+}
